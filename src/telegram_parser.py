@@ -23,6 +23,8 @@ def save_messages_parsed(output_path, user_messages):
 
 
 def stop_word_checker(actor, invalid_lines, text):
+    if text is None:
+        return False
     if type(text) != str:  # Telegram save links under 'text' key, but they are dictionary / list
         invalid_lines.append(f"[STOP_WORD] {actor} - {text}")
         return True
@@ -81,13 +83,27 @@ def run(json_path: str,
                     "time_format": time_format}
 
     logging.info(f"Loading telegram user data at {json_path}...")
-    telegram_data = load_data(json_path)
+    try:
+        telegram_data = load_data(json_path)
+    except FileNotFoundError:
+        logging.error(f"JSON file not found: {json_path}")
+        return
 
     logging.info(f"Start parsing telegram messages...")
-    user_messages = messages_parser(personal_chat, telegram_data, session_info)
+    try:
+        user_messages = messages_parser(personal_chat, telegram_data, session_info)
+    except Exception as e:
+        logging.error("Error occurred while parsing messages:")
+        logging.error(str(e))
+        return
 
     logging.info(f"Saving {len(user_messages)}^ telegram messages...")
-    save_messages_parsed(output_path, user_messages)
+    try:
+        save_messages_parsed(output_path, user_messages)
+    except Exception as e:
+        logging.error("Error occurred while saving parsed messages:")
+        logging.error(str(e))
+        return
 
 
 def main(argv):

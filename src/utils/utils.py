@@ -20,12 +20,9 @@ def extract_dict_structure(dictionary: dict) -> dict:
     """
     Return a dictionary with the same structure of input dict, but without data.
     When a key name is surrounded by square brackets, it means that the key contain a list of dict.
-
-    TODO bug: list is copied two times
     """
     structure = {}
     for key in dictionary.keys():
-        structure[key] = 'leaf'
         if type(dictionary[key]) == dict:
             sub_structure = extract_dict_structure(dictionary[key])
             structure[key] = sub_structure
@@ -34,6 +31,8 @@ def extract_dict_structure(dictionary: dict) -> dict:
             if type(first_el) == dict:  # assume that the list contain same dictionaries
                 sub_structure = extract_dict_structure(first_el)
                 structure[f"[{key}]"] = sub_structure
+        else:
+            structure[key] = 'leaf'
     return structure
 
 
