@@ -4,12 +4,10 @@ import sys
 import json
 import argparse
 from datetime import datetime
-from os.path import normpath, basename
-
+from utils.utils import configure_logging, extract_dict_structure, split_in_sessions
 from tqdm import tqdm
 
 sys.path.append("./")
-from src.utils.utils import extract_dict_structure, split_in_sessions
 
 USER_TAG = "[me]"
 OTHERS_TAG = "[others]"
@@ -18,8 +16,12 @@ TELEGRAM_STOP_WORDS = [word.replace('\n', '') for word in open('./data/resources
 
 def save_messages_parsed(output_path, user_messages):
     output_file = os.path.join(output_path, "telegram-chats.txt")
-    with open(output_file, 'w') as f:
-        [f.write(f"{msg}\n") for msg in user_messages]
+    try:
+        with open(output_file, 'w') as f:
+            f.writelines(user_messages)
+    except IOError as e:
+        logging.error(f"Error saving parsed messages: {str(e)}")
+        return
 
 
 def stop_word_checker(actor, invalid_lines, text):
@@ -65,11 +67,15 @@ def messages_parser(personal_chat, telegram_data, session_info: dict):
 
 
 def load_data(json_path):
-    with open(json_path, 'r') as f:
-        telegram_data = json.load(f)
-    telegram_data_structure = extract_dict_structure(telegram_data)
-    # logging.info(f'Input json structure:\n{json.dumps(telegram_data_structure, indent=4, sort_keys=True)}')
-    return telegram_data
+    try:
+        with open(json_path, 'r', errors='ignore') as f:
+            telegram_data = json.load(f)
+        telegram_data_structure = extract_dict_structure(telegram_data)
+        logging.info(f'Input json structure:\n{json.dumps(telegram_data_structure, indent=4, sort_keys=True)}')
+        return telegram_data
+    except FileNotFoundError:
+        logging.error(f"JSON file not found: {json_path}")
+        raise
 
 
 def run(json_path: str,
@@ -86,7 +92,6 @@ def run(json_path: str,
     try:
         telegram_data = load_data(json_path)
     except FileNotFoundError:
-        logging.error(f"JSON file not found: {json_path}")
         return
 
     logging.info(f"Start parsing telegram messages...")
@@ -121,13 +126,16 @@ def main(argv):
                         help="Hours between two messages to before add 'session_token'")
     parser.add_argument("--time_format", type=str, default="%Y-%m-%dT%H:%M:%S",
                         help="The Telegram format timestamp. Default is Italian format.")
-    parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true")
-    args = parser.parse_args(argv[1:])
-    loglevel = logging.DEBUG if args.verbose else logging.INFO
-    process_name = basename(normpath(argv[0]))
-    logging.basicConfig(format=f"[{process_name}][%(levelname)s]: %(message)s", level=loglevel, stream=sys.stdout)
-    delattr(args, "verbose")
-    run(**vars(args))
+
+    configure_logging(argv)
+
+    try:
+        args = parser.parse_args(argv[1:])
+        run(args.json_path, args.output_path, args.session_token, args.delta_h_threshold,
+            args.time_format, args.personal_chat)
+    except argparse.ArgumentError as e:
+        print("Error parsing command-line arguments:", str(e))
+        sys.exit(1)
 
 
 if __name__ == '__main__':

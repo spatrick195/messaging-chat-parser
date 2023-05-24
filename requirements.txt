@@ -1,5 +1,6 @@
-tqdm
-matplotlib
+tqdm~=4.65.0
+matplotlib~=3.7.1
 stop_words
-wordcloud
+wordcloud~=1.9.2
 parse>= 1.15.0
+python-dateutil~=2.8.2

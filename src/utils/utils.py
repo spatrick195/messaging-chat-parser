@@ -1,10 +1,13 @@
+import argparse
 import json
+import logging
+import os
+import sys
 from os import listdir, path
 from typing import Tuple, List
-from argparse import Namespace
 
 
-def params_printer(params: Namespace):
+def params_printer(params: argparse.Namespace):
     print(f"Inputs provided: {json.dumps(vars(params), indent=4)}")
 
 
@@ -42,3 +45,9 @@ def split_in_sessions(t_current, t_last, chat_text, delta_h_threshold, session_t
             delta_h = divmod((t_current - t_last).total_seconds(), 3600)[0]
             if delta_h >= delta_h_threshold:
                 chat_text.append(session_token)
+
+
+def configure_logging(verbose: bool):
+    loglevel = logging.DEBUG if verbose else logging.INFO
+    process_name = os.path.basename(os.path.normpath(sys.argv[0]))
+    logging.basicConfig(format=f"[{process_name}][%(levelname)s]: %(message)s", level=loglevel, stream=sys.stdout)
